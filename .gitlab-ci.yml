@@ -1,0 +1,23 @@
+image: ros:eloquent
+
+create_workspace:
+ stage: .pre
+ script:
+   - source /opt/ros/eloquent/setup.bash
+   
+   - mkdir -p ros_ws/src
+
+   - rm -f ros_ws/src/rosslt || true
+   - ln -s $(pwd) ros_ws/src/rosslt
+   
+   - cd ros_ws
+   - rm -rf build install log
+
+build:
+ stage: build
+ script:
+   - colcon build --packages-up-to rosslt_demo
+   - source install/local_setup.bash
+ artifacts:
+    paths:
+        - ros_ws/install
