@@ -17,7 +17,7 @@ public:
         RCLCPP_INFO(get_logger(), "Got message: '%i' from %s:%i", counter.get_data(),
                     counter.get_location().source_node.c_str(),
                     counter.get_location().location_id);
-        force_value(counter, counter + 1);
+        force_value(counter, counter + 2);
     });
     
   }

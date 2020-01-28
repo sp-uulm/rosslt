@@ -20,4 +20,4 @@ build:
    - source install/local_setup.bash
  artifacts:
     paths:
-        - ros_ws/install
+        - install

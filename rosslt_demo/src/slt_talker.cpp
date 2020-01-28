@@ -17,8 +17,9 @@ public:
     auto timer_callback =
       [this]() -> void {
         auto message = rosslt_msgs::msg::Int32Tracked();
-        message.data.data = reevaluate(count_);
-        message.set__location(count_.get_location());
+        auto tmp = 2*count_;
+        message.data.data = tmp;
+        message.set__location(tmp.get_location());
         RCLCPP_INFO(get_logger(), "Publishing: '%i'", message.data.data);
         publisher_->publish(message);
       };
