@@ -4,13 +4,18 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rosslt_msgs/msg/location.hpp"
+#include "rosslt_msgs/msg/location_header.hpp"
 
-template<typename T>
 class Location {
 public:
+    Location()
+    {
+    }
+
     Location(const std::string& source_node, unsigned int location_id)
         : source_node(source_node), location_id(location_id)
     {
@@ -30,6 +35,10 @@ public:
         return loc;
     }
 
+    bool is_valid() const {
+        return !source_node.empty();
+    }
+
     std::string source_node;
     unsigned int location_id;
     std::string expression; //rpn; value starts on stack
@@ -38,8 +47,16 @@ public:
 template<typename T>
 class Tracked {
 public:
-    Tracked(T data, Location<T> location) : data(data), location(location) {
+    using LocationMap = std::unordered_map<std::string, Location>;
 
+    Tracked(T data, Location loc) : data(data) {
+        location["."] = loc;
+    }
+
+    Tracked(T data, rosslt_msgs::msg::LocationHeader loc) : data(data) {
+        for (unsigned i = 0; i < loc.paths.size(); ++i) {
+            location[loc.paths[i]] = loc.locations[i];
+        }
     }
 
     operator T () const {
@@ -54,46 +71,60 @@ public:
         return data;
     }
 
-    Location<T>& get_location() {
+    LocationMap& get_location() {
         return location;
     }
 
-    const Location<T>& get_location() const {
+    const LocationMap& get_location() const {
         return location;
+    }
+
+    template<typename U>
+    Tracked<U> get_field(const U& member, const std::string& name) const {
+        assert(&member >= &data && &member < &data + sizeof(T));
+
+        return Tracked<U>(member, Location());
+    }
+
+    template<typename U>
+    Tracked<T> set_field(const U& member, const std::string& name) const {
+        assert(&member >= &data && &member < &data + sizeof(T));
+
+        return *this;
     }
 
     Tracked<T> operator++(int) {
         Tracked<T> copy = *this;
         data++;
-        location.expression += "1;+;";
+        location["."].expression += "1;+;";
         return copy;
     }
 
     Tracked<T> operator+(const T& other) const {
         Tracked<T> copy = *this;
         copy.data = data + other;
-        copy.location.expression += std::to_string(other) + ";+;";
+        copy.location["."].expression += std::to_string(other) + ";+;";
         return copy;
     }
 
     Tracked<T> operator*(const T& other) const {
         Tracked<T> copy = *this;
         copy.data = data * other;
-        copy.location.expression += std::to_string(other) + ";*;";
+        copy.location["."].expression += std::to_string(other) + ";*;";
         return copy;
     }
 
     Tracked<T> operator-(const T& other) const {
         Tracked<T> copy = *this;
         copy.data = data - other;
-        copy.location.expression += std::to_string(other) + ";-;";
+        copy.location["."].expression += std::to_string(other) + ";-;";
         return copy;
     }
 
     Tracked<T> operator/(const T& other) const {
         Tracked<T> copy = *this;
         copy.data = data / other;
-        copy.location.expression += std::to_string(other) + ";/;";
+        copy.location["."].expression += std::to_string(other) + ";/;";
         return copy;
     }
 
@@ -115,7 +146,7 @@ public:
 
 private:
     T data;
-    Location<T> location;
+    LocationMap location;
 };
 
 template <typename T>
@@ -169,28 +200,34 @@ protected:
     template<typename T>
     Tracked<T> loc(T data, unsigned id = static_cast<unsigned int>(rand())) {
         declare_parameter("loc" + std::to_string(id), data);
-        Location<T> location {get_fully_qualified_name(), id};
+        Location location {get_fully_qualified_name(), id};
         return Tracked<T>(data, location);
     }
 
     template<typename T, typename U>
     void force_value(const Tracked<T>& val, const U& new_val) {
-        rclcpp::AsyncParametersClient param_client(shared_from_this(), val.get_location().source_node);
+        if (!val.get_location().at(".").is_valid())
+            return;
+
+        rclcpp::AsyncParametersClient param_client(shared_from_this(), val.get_location().at(".").source_node);
         param_client.wait_for_service();
-        auto new_val_rev = applyExpression(static_cast<T>(new_val), reverseExpression(val.get_location().expression));
-        param_client.set_parameters({rclcpp::Parameter("loc" + std::to_string(val.get_location().location_id), new_val_rev)});
+        auto new_val_rev = applyExpression(static_cast<T>(new_val), reverseExpression(val.get_location().at(".").expression));
+        param_client.set_parameters({rclcpp::Parameter("loc" + std::to_string(val.get_location().at(".").location_id), new_val_rev)});
     }
 
     template<typename T>
     Tracked<T>& reevaluate(Tracked<T>& val) {
+        if (!val.get_location().at(".").is_valid())
+            return val;
+
         if (val.get_location().source_node == get_fully_qualified_name()) {
-            get_parameter("loc" + std::to_string(val.get_location().location_id), val.get_data());
+            get_parameter("loc" + std::to_string(val.get_location().at(".").location_id), val.get_data());
         } else {
-            rclcpp::SyncParametersClient param_client(shared_from_this(), val.get_location().source_node);
+            rclcpp::SyncParametersClient param_client(shared_from_this(), val.get_location().at(".").source_node);
             param_client.wait_for_service();
-            val.get_data() = param_client.get_parameter("loc" + std::to_string(val.get_location().location_id), val.get_data());
+            val.get_data() = param_client.get_parameter("loc" + std::to_string(val.get_location().at(".").location_id), val.get_data());
         }
-        val.get_data() = applyExpression(val.get_data(), val.get_location().expression);
+        val.get_data() = applyExpression(val.get_data(), val.get_location()["."].expression);
         return val;
     }
 

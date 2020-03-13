@@ -1,2 +1,2 @@
 rosslt_msgs/LocationHeader location
-std_msgs/Int32 data
+visualization_msgs/Marker data

@@ -2,7 +2,7 @@
 #include <memory>
 
 #include "rclcpp/rclcpp.hpp"
-#include "rosslt_msgs/msg/int32_tracked.hpp"
+#include "rosslt_msgs/msg/marker_tracked.hpp"
 
 #include "rosslt/trackingnode.h"
 
@@ -19,12 +19,7 @@ public:
         auto message = rosslt_msgs::msg::Int32Tracked();
         auto tmp = 2*count_;
         message.data.data = tmp;
-
-        for (const auto& [path, loc] : tmp.get_location()) {
-            message.location.paths.push_back(path);
-            message.location.locations.push_back(loc);
-        }
-
+        message.set__location(tmp.get_location());
         RCLCPP_INFO(get_logger(), "Publishing: '%i'", message.data.data);
         publisher_->publish(message);
       };

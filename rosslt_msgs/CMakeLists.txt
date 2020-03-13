@@ -18,13 +18,16 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(rosslt_msgs
   "msg/Int32Tracked.msg"
   "msg/Location.msg"
-  DEPENDENCIES builtin_interfaces std_msgs
+  "msg/LocationHeader.msg"
+  "msg/MarkerTracked.msg"
+  DEPENDENCIES builtin_interfaces std_msgs visualization_msgs
 )
 
 ament_package()
