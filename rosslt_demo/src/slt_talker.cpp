@@ -16,17 +16,12 @@ public:
     publisher_ = create_publisher<rosslt_msgs::msg::Int32Tracked>("foo", 10);
     auto timer_callback =
       [this]() -> void {
-        auto message = rosslt_msgs::msg::Int32Tracked();
-        auto tmp = 2*count_;
-        message.data.data = tmp;
+        auto message = Tracked<std_msgs::msg::Int32>();
 
-        for (const auto& [path, loc] : tmp.get_location()) {
-            message.location.paths.push_back(path);
-            message.location.locations.push_back(loc);
-        }
+        SET_FIELD(message, data, 2*count_);
 
-        RCLCPP_INFO(get_logger(), "Publishing: '%i'", message.data.data);
-        publisher_->publish(message);
+        RCLCPP_INFO(get_logger(), "Publishing: '%i'", message.get_data().data);
+        publisher_->publish(static_cast<rosslt_msgs::msg::Int32Tracked>(message));
       };
     timer_ = create_wall_timer(500ms, timer_callback);
   }

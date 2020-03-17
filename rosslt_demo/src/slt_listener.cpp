@@ -13,7 +13,8 @@ public:
   {
     subscriber_ = create_subscription<rosslt_msgs::msg::Int32Tracked>("foo", rclcpp::QoS(rclcpp::KeepLast(20)),
     [this](rosslt_msgs::msg::Int32Tracked::UniquePtr msg) {
-        Tracked<int> counter {msg->data.data, msg->location};
+        Tracked<std_msgs::msg::Int32> counter_msg {*msg};
+        Tracked<int> counter = GET_FIELD(counter_msg, data);
         RCLCPP_INFO(get_logger(), "Got message: '%i' from %s:%i", counter.get_data(),
                     counter.get_location()["."].source_node.c_str(),
                     counter.get_location()["."].location_id);
