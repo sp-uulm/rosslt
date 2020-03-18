@@ -11,6 +11,7 @@
 
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
+  <depend>visualization_msgs</depend>
   <depend>rosslt_lib</depend>
   <depend>rosslt_msgs</depend>
 

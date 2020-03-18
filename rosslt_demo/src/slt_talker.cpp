@@ -14,11 +14,12 @@ public:
       : TrackingNode("slt_talker"), count_ {loc(5)}
   {
     publisher_ = create_publisher<rosslt_msgs::msg::Int32Tracked>("foo", 10);
+
     auto timer_callback =
       [this]() -> void {
         auto message = Tracked<std_msgs::msg::Int32>();
 
-        SET_FIELD(message, data, 2*count_);
+        SET_FIELD(message, data, 2*reevaluate(count_));
 
         RCLCPP_INFO(get_logger(), "Publishing: '%i'", message.get_data().data);
         publisher_->publish(static_cast<rosslt_msgs::msg::Int32Tracked>(message));

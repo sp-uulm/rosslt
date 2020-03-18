@@ -19,6 +19,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(rosslt_msgs REQUIRED)
 find_package(rosslt_lib REQUIRED)
 
@@ -33,10 +34,21 @@ add_executable(slt_listener src/slt_listener.cpp)
 ament_target_dependencies(slt_listener rclcpp std_msgs rosslt_msgs rosslt_lib)
 target_link_libraries(slt_listener rosslt_lib::rosslt)
 
+add_executable(vis_talker src/visualization_talker.cpp)
+ament_target_dependencies(vis_talker rclcpp std_msgs visualization_msgs rosslt_msgs rosslt_lib)
+target_link_libraries(vis_talker rosslt_lib::rosslt)
+
+add_executable(vis_listener src/visualization_listener.cpp)
+ament_target_dependencies(vis_listener rclcpp std_msgs visualization_msgs rosslt_msgs rosslt_lib)
+target_link_libraries(vis_listener rosslt_lib::rosslt)
+
+
 # Install nodes
 install(TARGETS
   slt_talker
   slt_listener
+  vis_talker
+  vis_listener
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -12,12 +12,10 @@
 
 class Location {
 public:
-    Location()
-    {
-    }
+    Location() = default;
 
-    Location(const std::string& source_node, unsigned int location_id)
-        : source_node(source_node), location_id(location_id)
+    Location(std::string source_node, unsigned int location_id)
+        : source_node(std::move(source_node)), location_id(location_id)
     {
     }
 
@@ -65,7 +63,7 @@ public:
         location["."] = loc;
     }
 
-    Tracked(const T& data, const LocationMap& loc) : data(data), location(loc) {
+    Tracked(const T& data, LocationMap loc) : data(data), location(std::move(loc)) {
     }
 
     Tracked(const T& data, const rosslt_msgs::msg::LocationHeader& loc) : data(data) {
@@ -119,8 +117,8 @@ public:
 
         for (const auto& [k, v] : location) {
             if (k.rfind(name, 0) == 0) {// k.starts_with(name)
-                auto new_key = k.substr(name.size() + 1);
-                map[new_key.empty() ? "." : new_key] = v;
+                auto new_key = k.substr(name.size());
+                map[new_key.empty() ? "." : new_key.substr(1)] = v;
             }
         }
 
@@ -197,7 +195,7 @@ private:
     LocationMap location;
 };
 
-#define SET_FIELD(Obj, Field, Value) (Obj).set_field((Obj).get_data().Field, #Field, (Value))
+#define SET_FIELD(Obj, Field, Value) (Obj) = (Obj).set_field((Obj).get_data().Field, #Field, (Value))
 
 #define GET_FIELD(Obj, Field) (Obj).get_field((Obj).get_data().Field, #Field)
 
@@ -209,6 +207,11 @@ T sto(const std::string& s) {
 template <>
 int sto<int>(const std::string& s) {
     return stoi(s);
+}
+
+template <>
+double sto<double>(const std::string& s) {
+    return stod(s);
 }
 
 template <typename T>
@@ -272,7 +275,7 @@ protected:
         if (!val.get_location().at(".").is_valid())
             return val;
 
-        if (val.get_location().source_node == get_fully_qualified_name()) {
+        if (val.get_location().at(".").source_node == get_fully_qualified_name()) {
             get_parameter("loc" + std::to_string(val.get_location().at(".").location_id), val.get_data());
         } else {
             rclcpp::SyncParametersClient param_client(shared_from_this(), val.get_location().at(".").source_node);
