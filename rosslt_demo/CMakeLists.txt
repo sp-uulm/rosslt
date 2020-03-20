@@ -22,6 +22,7 @@ find_package(std_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(rosslt_msgs REQUIRED)
 find_package(rosslt_lib REQUIRED)
+find_package(interactive_markers REQUIRED)
 
 include_directories(include)
 
@@ -39,7 +40,7 @@ ament_target_dependencies(vis_talker rclcpp std_msgs visualization_msgs rosslt_m
 target_link_libraries(vis_talker rosslt_lib::rosslt)
 
 add_executable(vis_listener src/visualization_listener.cpp)
-ament_target_dependencies(vis_listener rclcpp std_msgs visualization_msgs rosslt_msgs rosslt_lib)
+ament_target_dependencies(vis_listener rclcpp std_msgs visualization_msgs rosslt_msgs rosslt_lib interactive_markers)
 target_link_libraries(vis_listener rosslt_lib::rosslt)
 
 

@@ -14,6 +14,7 @@
   <depend>visualization_msgs</depend>
   <depend>rosslt_lib</depend>
   <depend>rosslt_msgs</depend>
+  <depend>interacitve_markers</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
