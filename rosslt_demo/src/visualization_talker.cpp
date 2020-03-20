@@ -21,16 +21,19 @@ public:
       auto timer_callback =
           [this]() -> void {
               auto message = Tracked<visualization_msgs::msg::Marker>();
+              std::cout << "a" << std::endl;
 
               auto pose = GET_FIELD(message, pose);
               auto position = GET_FIELD(pose, position);
 
-              SET_FIELD(position, x, reevaluate(x));
-              SET_FIELD(position, y, reevaluate(y));
-              SET_FIELD(position, z, reevaluate(z));
+              SET_FIELD(position, x, x);
+              SET_FIELD(position, y, y);
+              SET_FIELD(position, z, z);
 
               SET_FIELD(pose, position, position);
               SET_FIELD(message, pose, pose);
+
+              reevaluate(message);
 
               publisher_->publish(static_cast<rosslt_msgs::msg::MarkerTracked>(message));
           };

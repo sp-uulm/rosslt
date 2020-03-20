@@ -10,6 +10,29 @@
 #include "rosslt_msgs/msg/location.hpp"
 #include "rosslt_msgs/msg/location_header.hpp"
 
+#include "rosidl_typesupport_introspection_cpp/message_type_support_decl.hpp"
+#include "rosidl_typesupport_introspection_cpp/message_introspection.hpp"
+#include "rosidl_typesupport_introspection_cpp/field_types.hpp"
+
+template <typename T>
+void print_message_fields(const T& message) {
+    const auto* handle = rosidl_typesupport_introspection_cpp::get_message_type_support_handle<T>();
+    std::cout << "typesupport: " << handle->typesupport_identifier << std::endl;
+    std::cout << "ptr:" << handle->data << std::endl;
+
+    const auto* members = reinterpret_cast<const rosidl_typesupport_introspection_cpp::MessageMembers*>(handle->data);
+    std::cout << "info: " << members->message_namespace_ << std::endl;
+    std::cout << "info: " << members->message_name_ << std::endl;
+
+    for (unsigned i = 0; i < members->member_count_; ++i) {
+        const auto& member = members->members_[i];
+        std::cout << member.name_ << std::endl;
+        std::cout << member.type_id_ << std::endl;
+        std::cout << member.members_ << std::endl;
+        std::cout << member.offset_ << std::endl;
+    }
+}
+
 class Location {
 public:
     Location() = default;
@@ -199,50 +222,134 @@ private:
 
 #define GET_FIELD(Obj, Field) (Obj).get_field((Obj).get_data().Field, #Field)
 
+#define APPLY_AS(type) {\
+    Tracked<type> t {*reinterpret_cast<type*>(reinterpret_cast<uint8_t*>(&tracked_message.get_data()) + member.offset_ + offset), tracked_message.get_location()[prefix + member.name_]}; \
+    func(t);\
+    *reinterpret_cast<type*>(reinterpret_cast<uint8_t*>(&tracked_message.get_data()) + member.offset_ + offset) = t.get_data();\
+    tracked_message.get_location()[prefix + member.name_] = t.get_location()["."];}
+
+template<typename T, class Visitor>
+void map_leaves(Tracked<T>& tracked_message, Visitor func) {
+    const auto* handle = rosidl_typesupport_introspection_cpp::get_message_type_support_handle<T>();
+
+    const auto* members = reinterpret_cast<const rosidl_typesupport_introspection_cpp::MessageMembers*>(handle->data);
+
+    map_leaves_(tracked_message, members, func, "", 0);
+}
+
+template<typename T, class Visitor>
+void map_leaves_(Tracked<T>& tracked_message, const rosidl_typesupport_introspection_cpp::MessageMembers* members, Visitor func, const std::string& prefix, size_t offset) {
+
+    for (unsigned i = 0; i < members->member_count_; ++i) {
+        const auto& member = members->members_[i];
+
+        switch (member.type_id_) {
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_BOOL:
+            APPLY_AS(bool);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_INT8:
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_BYTE:
+            APPLY_AS(int8_t);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_UINT8:
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_CHAR:
+            APPLY_AS(uint8_t);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_FLOAT:
+            APPLY_AS(float);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_INT16:
+            APPLY_AS(int16_t);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_INT32:
+            APPLY_AS(int32_t);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_INT64:
+            APPLY_AS(int64_t);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_WCHAR:
+            APPLY_AS(wchar_t);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_DOUBLE:
+            APPLY_AS(double);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_STRING:
+            APPLY_AS(std::string);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_UINT16:
+            APPLY_AS(uint16_t);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_UINT32:
+            APPLY_AS(uint32_t);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_UINT64:
+            APPLY_AS(uint64_t);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_MESSAGE:
+            {
+                const auto* child_members = reinterpret_cast<const rosidl_typesupport_introspection_cpp::MessageMembers*>(member.members_->data);
+                map_leaves_(tracked_message, child_members, func, prefix + member.name_ + "/", offset + member.offset_);
+            }
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_WSTRING:
+//            APPLY_AS(std::wstring);
+            break;
+        case rosidl_typesupport_introspection_cpp::ROS_TYPE_LONG_DOUBLE:
+            APPLY_AS(long double);
+            break;
+        }
+    }
+}
+
 template <typename T>
 T sto(const std::string& s) {
-    return s;
+    if constexpr (std::is_integral_v<T>) {
+        return stoi(s);
+    } else if constexpr (std::is_floating_point_v<T>) {
+        return stod(s);
+    } else {
+        return s;
+    }
 }
 
 template <>
-int sto<int>(const std::string& s) {
-    return stoi(s);
-}
-
-template <>
-double sto<double>(const std::string& s) {
-    return stod(s);
+bool sto<bool>(const std::string& s) {
+    return s == "1" || s == "true" || s == "True";
 }
 
 template <typename T>
 T applyExpression(T val, const std::string& exp_string) {
-    std::cout << "applyExpression '" << exp_string << "' to " << val << std::endl;
-    std::vector<T> stack;
-    stack.push_back(val);
-    size_t end = exp_string.find(';');
-    for (size_t start = 0; end != std::string::npos; end = exp_string.find(';', start)) {
-        std::string token = exp_string.substr(start, end-start);
-        std::cout << "token: '"<< token << "'" << std::endl;
-        start = end+1;
+    if constexpr (!std::is_arithmetic_v<T>) {
+        return val;
+    } else {
+        std::cout << "applyExpression '" << exp_string << "' to " << val << std::endl;
+        std::vector<T> stack;
+        stack.push_back(val);
+        size_t end = exp_string.find(';');
+        for (size_t start = 0; end != std::string::npos; end = exp_string.find(';', start)) {
+            std::string token = exp_string.substr(start, end-start);
+            std::cout << "token: '"<< token << "'" << std::endl;
+            start = end+1;
 
-        if (token == "+") {
-            *(stack.end()-2) = *(stack.end()-2) + stack.back();
-            stack.pop_back();
-        } else if (token == "-") {
-            *(stack.end()-2) = *(stack.end()-2) - stack.back();
-            stack.pop_back();
-        } else if (token == "*") {
-            *(stack.end()-2) = *(stack.end()-2) * stack.back();
-            stack.pop_back();
-        } else if (token == "/") {
-            *(stack.end()-2) = *(stack.end()-2) / stack.back();
-            stack.pop_back();
-        } else {
-            stack.push_back(sto<T>(token));
+            if (token == "+") {
+                *(stack.end()-2) = *(stack.end()-2) + stack.back();
+                stack.pop_back();
+            } else if (token == "-") {
+                *(stack.end()-2) = *(stack.end()-2) - stack.back();
+                stack.pop_back();
+            } else if (token == "*") {
+                *(stack.end()-2) = *(stack.end()-2) * stack.back();
+                stack.pop_back();
+            } else if (token == "/") {
+                *(stack.end()-2) = *(stack.end()-2) / stack.back();
+                stack.pop_back();
+            } else {
+                stack.push_back(sto<T>(token));
+            }
         }
+        std::cout << "result: " << stack.back() << std::endl;
+        return stack.back();
     }
-    std::cout << "result: " << stack.back() << std::endl;
-    return stack.back();
 }
 
 std::string reverseExpression(const std::string& exp);
@@ -272,18 +379,25 @@ protected:
 
     template<typename T>
     Tracked<T>& reevaluate(Tracked<T>& val) {
-        if (!val.get_location().at(".").is_valid())
+        if constexpr (rosidl_generator_traits::is_message<T>::value) {
+            map_leaves(val, [this](auto& x) {
+                reevaluate(x);
+            });
             return val;
-
-        if (val.get_location().at(".").source_node == get_fully_qualified_name()) {
-            get_parameter("loc" + std::to_string(val.get_location().at(".").location_id), val.get_data());
         } else {
-            rclcpp::SyncParametersClient param_client(shared_from_this(), val.get_location().at(".").source_node);
-            param_client.wait_for_service();
-            val.get_data() = param_client.get_parameter("loc" + std::to_string(val.get_location().at(".").location_id), val.get_data());
+            if (!val.get_location().at(".").is_valid())
+                return val;
+
+            if (val.get_location().at(".").source_node == get_fully_qualified_name()) {
+                get_parameter("loc" + std::to_string(val.get_location().at(".").location_id), val.get_data());
+            } else {
+                rclcpp::SyncParametersClient param_client(shared_from_this(), val.get_location().at(".").source_node);
+                param_client.wait_for_service();
+                val.get_data() = param_client.get_parameter("loc" + std::to_string(val.get_location().at(".").location_id), val.get_data());
+            }
+            val.get_data() = applyExpression(val.get_data(), val.get_location()["."].expression);
+            return val;
         }
-        val.get_data() = applyExpression(val.get_data(), val.get_location()["."].expression);
-        return val;
     }
 
 };

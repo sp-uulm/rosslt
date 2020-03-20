@@ -19,6 +19,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rosslt_msgs REQUIRED)
+find_package(rosidl_typesupport_introspection_cpp REQUIRED)
 
 include_directories(include)
 
@@ -26,7 +27,7 @@ include_directories(include)
 add_library(rosslt SHARED
     src/trackingnode.cpp)
 
-ament_target_dependencies(rosslt rclcpp rosslt_msgs)
+ament_target_dependencies(rosslt rclcpp rosslt_msgs rosidl_typesupport_introspection_cpp)
 ament_export_include_directories(include)
 
 ament_export_interfaces(export_rosslt HAS_LIBRARY_TARGET)
