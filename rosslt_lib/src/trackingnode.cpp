@@ -1,5 +1,24 @@
 #include "rosslt/trackingnode.h"
 
+Location::Location(std::string source_node, unsigned int location_id)
+    : source_node(std::move(source_node)), location_id(location_id)
+{
+}
+
+Location::Location(const rosslt_msgs::msg::Location& loc) {
+    source_node = loc.source_node;
+    location_id = loc.location_id;
+    expression = loc.expression;
+}
+
+Location::operator rosslt_msgs::msg::Location () const {
+    rosslt_msgs::msg::Location loc;
+    loc.set__source_node(source_node);
+    loc.set__location_id(location_id);
+    loc.set__expression(expression);
+    return loc;
+}
+
 TrackingNode::TrackingNode(const std::string& name) : Node(name) {
 
 }
