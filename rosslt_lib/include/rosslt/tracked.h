@@ -40,8 +40,10 @@ public:
         msg.data = data2msg<decltype(msg.data)>(data);
 
         for (const auto& [path, loc] : location) {
-            msg.location.paths.push_back(path);
-            msg.location.locations.push_back(loc);
+            if (loc.is_valid()) {
+                msg.location.paths.push_back(path);
+                msg.location.locations.push_back(loc);
+            }
         }
 
         return msg;

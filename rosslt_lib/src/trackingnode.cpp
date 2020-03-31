@@ -19,7 +19,7 @@ Location::operator rosslt_msgs::msg::Location () const {
     return loc;
 }
 
-TrackingNode::TrackingNode(const std::string& name) : Node(name) {
+TrackingNode::TrackingNode(const std::string& name) : Node(name), loc_mgr(*this) {
 
 }
 

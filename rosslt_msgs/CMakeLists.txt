@@ -23,10 +23,12 @@ find_package(builtin_interfaces REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(rosslt_msgs
-  "msg/Int32Tracked.msg"
   "msg/Location.msg"
   "msg/LocationHeader.msg"
+  "msg/SourceChange.msg"
+  "msg/Int32Tracked.msg"
   "msg/MarkerTracked.msg"
+  "srv/GetValue.srv"
   DEPENDENCIES builtin_interfaces std_msgs visualization_msgs
 )
 

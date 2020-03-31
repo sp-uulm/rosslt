@@ -15,13 +15,13 @@ public:
   {
       x = loc(2.0);
       y = loc(1.5);
-      z = loc(0.0);
 
       publisher_ = create_publisher<rosslt_msgs::msg::MarkerTracked>("foo", 10);
       auto timer_callback =
           [this]() -> void {
               auto message = Tracked<visualization_msgs::msg::Marker>();
               std::cout << "a" << std::endl;
+              auto z = loc(0.0);
 
               auto pose = GET_FIELD(message, pose);
               auto position = GET_FIELD(pose, position);
@@ -43,7 +43,7 @@ public:
 private:
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<rosslt_msgs::msg::MarkerTracked>::SharedPtr publisher_;
-  Tracked<double> x, y, z;
+  Tracked<double> x, y;
 };
 
 int main(int argc, char * argv[]) {
