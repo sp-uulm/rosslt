@@ -3,7 +3,8 @@ image: ros:eloquent
 create_workspace:
  stage: .pre
  script:
-   - apt install ros-eloquent-interactive-markers
+   - apt update -y
+   - apt -y install ros-eloquent-interactive-markers
  
    - source /opt/ros/eloquent/setup.bash
    
