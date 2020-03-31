@@ -3,6 +3,8 @@ image: ros:eloquent
 create_workspace:
  stage: .pre
  script:
+   - apt install ros-eloquent-interactive_script
+ 
    - source /opt/ros/eloquent/setup.bash
    
    - mkdir -p ros_ws/src
