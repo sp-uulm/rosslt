@@ -16,7 +16,7 @@ public:
       x = loc(2.0);
       y = loc(1.5);
 
-      publisher_ = create_publisher<rosslt_msgs::msg::MarkerTracked>("foo", 10);
+      publisher_ = create_publisher<rosslt_msgs::msg::MarkerTracked>("tracked_marker", 10);
       auto timer_callback =
           [this]() -> void {
               auto message = Tracked<visualization_msgs::msg::Marker>();

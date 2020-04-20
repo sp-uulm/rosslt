@@ -47,4 +47,19 @@ install(TARGETS
   INCLUDES DESTINATION include
 )
 
+if(BUILD_TESTING)
+    find_package(ament_lint_auto REQUIRED)
+    find_package(ament_cmake_gtest REQUIRED)
+
+    ament_lint_auto_find_test_dependencies()
+
+    ament_add_gtest(test_tracked test/test_tracked.cpp)
+    if(TARGET test_tracked)
+        ament_target_dependencies(test_tracked
+#          "rosslt_lib"
+        )
+        target_link_libraries(test_tracked rosslt)
+    endif()
+endif()
+
 ament_package()

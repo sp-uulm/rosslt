@@ -18,9 +18,9 @@ public:
   Subscriber()
   : TrackingNode("vis_listener")
   {
-    server = std::make_unique<interactive_markers::InteractiveMarkerServer>("simple_marker", this);
+    server = std::make_unique<interactive_markers::InteractiveMarkerServer>("interactive_marker", this);
 
-    subscriber_ = create_subscription<rosslt_msgs::msg::MarkerTracked>("foo", rclcpp::QoS(rclcpp::KeepLast(20)),
+    subscriber_ = create_subscription<rosslt_msgs::msg::MarkerTracked>("tracked_marker", rclcpp::QoS(rclcpp::KeepLast(20)),
     [this](rosslt_msgs::msg::MarkerTracked::UniquePtr msg) {
         Tracked<visualization_msgs::msg::Marker> marker {*msg};
 

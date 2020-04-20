@@ -28,11 +28,55 @@ std::string inverse_op(const std::string& op) {
     if (op == "-") return "+";
     if (op == "*") return "/";
     if (op == "/") return "*";
+    if (op == "swap") return "swap";
+    if (op == "sin") return "asin";
+    if (op == "cos") return "acos";
+    if (op == "asin") return "sin";
+    if (op == "acos") return "cos";
     throw std::invalid_argument("no valid operator '" + op + "'");
 }
 
+int is_operator(const std::string& token) {
+    if (token == "+") return 2;
+    if (token == "-") return 2;
+    if (token == "*") return 2;
+    if (token == "/") return 2;
+    if (token == "sin") return 1;
+    if (token == "cos") return 1;
+    if (token == "asin") return 1;
+    if (token == "acos") return 1;
+    if (token == "swap") return 1;
+
+    return 0;
+}
+
+std::string reverseExpression(const std::vector<std::string>& v, int pos, bool swapped = false) {
+    if (pos >= v.size())
+        return "";
+
+    std::stringstream result;
+
+    int n = 0;
+    int i = pos;
+    for(;;) {
+        n -= is_operator(v[i]);
+        if (n < 0)
+            break;
+        n++;
+        i++;
+    }
+
+    //the operator at i depends on the source and must be reversed, everything before i can be copied to the result
+
+    for (int j = 0; j < i; ++j) {
+        result << v[j] << ";";
+    }
+    result << (swapped || (i-1 >= 0 && v[i-1] == "swap") ? v[i] : inverse_op(v[i])) << ";";
+
+    return reverseExpression(v, i+1, (v[i] == "swap")) + result.str();
+}
+
 std::string reverseExpression(const std::string& exp) {
-    std::cout << "reverse Expression: '" << exp << "'" << std::endl;
     std::vector<std::string> v;
     size_t end = exp.find(';');
     for (size_t start = 0; end != std::string::npos; end = exp.find(';', start)) {
@@ -42,12 +86,7 @@ std::string reverseExpression(const std::string& exp) {
         v.push_back(token);
     }
 
-    std::stringstream result;
-
-    for (int i = static_cast<int>(v.size())-2; i >= 0; i-=2) {
-        result << v[i] << ";" << inverse_op(v[i+1]) << ";";
-    }
-
-    std::cout << "result: '" << result.str() << "'" << std::endl;
-    return result.str();
+    return reverseExpression(v, 0);
 }
+
+

@@ -23,7 +23,7 @@ public:
     }
 
     std::string source_node;
-    unsigned int location_id;
+    int location_id = 0;
     std::string expression; //rpn; value starts on stack
 };
 

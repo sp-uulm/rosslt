@@ -9,11 +9,17 @@
 #include "rosidl_typesupport_introspection_cpp/field_types.hpp"
 
 #include <string>
+#include <cmath>
 
 template<typename T>
 class Tracked {
 public:
     Tracked(T data = T(), Location loc = Location()) : data(data) {
+        location["."] = loc;
+    }
+
+    template <typename U>
+    Tracked(U data = U(), Location loc = Location(), std::enable_if_t<!rosidl_generator_traits::is_message<U>::value>* = nullptr) : data(data) {
         location["."] = loc;
     }
 
@@ -27,7 +33,7 @@ public:
     }
 
     template <typename Msg>
-    Tracked(const Msg& msg) : Tracked(msg2data<T>(msg.data), msg.location) {
+    Tracked(const Msg& msg, std::enable_if_t<rosidl_generator_traits::is_message<Msg>::value>* = nullptr) : Tracked(msg2data<T>(msg.data), msg.location) {
     }
 
     operator T () const {
@@ -95,6 +101,22 @@ public:
         return copy;
     }
 
+    Tracked<T> sin() const {
+        static_assert (std::is_arithmetic_v<T>, "sin can only be called on tracked arithmetic values");
+        Tracked<T> copy = *this;
+        copy.data = std::sin(data);
+        copy.location["."].expression += "sin;";
+        return copy;
+    }
+
+    Tracked<T> cos() const {
+        static_assert (std::is_arithmetic_v<T>, "cos can only be called on tracked arithmetic values");
+        Tracked<T> copy = *this;
+        copy.data = std::cos(data);
+        copy.location["."].expression += "cos;";
+        return copy;
+    }
+
     Tracked<T> operator++(int) {
         Tracked<T> copy = *this;
         data++;
@@ -102,48 +124,113 @@ public:
         return copy;
     }
 
-    Tracked<T> operator+(const T& other) const {
-        Tracked<T> copy = *this;
-        copy.data = data + other;
-        copy.location["."].expression += std::to_string(other) + ";+;";
-        return copy;
+    template <typename U, typename V>
+    friend Tracked<T> operator+(const U& lhs, const V& rhs) {
+        if constexpr (std::is_same_v<U, Tracked<T>>) {
+            Tracked<T> copy = lhs;
+            copy.data = lhs.data + static_cast<T>(rhs);
+            copy.location["."].expression += to_literal(static_cast<T>(rhs)) + ";+;";
+            return copy;
+        } else if constexpr (std::is_same_v<V, Tracked<T>>) {
+            Tracked<T> copy = rhs;
+            copy.data = static_cast<T>(lhs) + rhs.data;
+            copy.location["."].expression += to_literal(static_cast<T>(lhs)) + ";swap;+;";
+            return copy;
+        } else {
+            return static_cast<T>(lhs) + static_cast<T>(rhs);
+        }
     }
 
-    Tracked<T> operator*(const T& other) const {
-        Tracked<T> copy = *this;
-        copy.data = data * other;
-        copy.location["."].expression += std::to_string(other) + ";*;";
-        return copy;
+    template <typename U, typename V>
+    friend Tracked<T> operator*(const U& lhs, const V& rhs) {
+
+        // both operands are tracked, so we can choose which side to use -> lhs bias
+        if constexpr (std::is_same_v<U, Tracked<T>> && std::is_same_v<V, Tracked<T>>) {
+            Tracked<T> copy;
+            copy.data = lhs.data * rhs.data;
+
+            // if the lhs has a source and the rhs is not 0 use the lhs as source, otherwise use the rhs as source
+            if (lhs.location.at(".").is_valid()) {
+
+                //optimization: delete the location, if the rhs is zero as it cannot be reversed
+                if constexpr (std::is_arithmetic_v<T>) {
+                    if (static_cast<T>(rhs) == 0) {
+                        goto use_rhs;
+                    }
+                }
+
+                copy.location = lhs.location;
+                copy.location["."].expression += to_literal(static_cast<T>(rhs)) + ";*;";
+                return copy;
+            }
+
+use_rhs:
+            copy.location = rhs.location;
+            copy.location["."].expression += to_literal(static_cast<T>(lhs)) + ";swap;*;";
+            return copy;
+        } else if constexpr (std::is_same_v<U, Tracked<T>>) {
+            Tracked<T> copy = lhs;
+            copy.data = lhs.data * static_cast<T>(rhs);
+            copy.location["."].expression += to_literal(static_cast<T>(rhs)) + ";*;";
+
+            //optimization: delete the location, if the rhs is zero as it cannot be reversed
+            if constexpr (std::is_arithmetic_v<T>) {
+                if (static_cast<T>(rhs) == 0) {
+                    copy.location["."] = Location();
+                }
+            }
+
+            return copy;
+        } else if constexpr (std::is_same_v<V, Tracked<T>>) {
+            Tracked<T> copy = rhs;
+            copy.data = static_cast<T>(lhs) * rhs.data;
+            copy.location["."].expression += to_literal(static_cast<T>(lhs)) + ";swap;*;";
+
+            //optimization: delete the location, if the lhs is zero as it cannot be reversed
+            if constexpr (std::is_arithmetic_v<T>) {
+                if (static_cast<T>(lhs) == 0) {
+                    copy.location["."] = Location();
+                }
+            }
+
+            return copy;
+        } else {
+            return static_cast<T>(lhs) * static_cast<T>(rhs);
+        }
     }
 
-    Tracked<T> operator-(const T& other) const {
-        Tracked<T> copy = *this;
-        copy.data = data - other;
-        copy.location["."].expression += std::to_string(other) + ";-;";
-        return copy;
+    template <typename U, typename V>
+    friend Tracked<T> operator-(const U& lhs, const V& rhs) {
+        if constexpr (std::is_same_v<U, Tracked<T>>) {
+            Tracked<T> copy = lhs;
+            copy.data = lhs.data - static_cast<T>(rhs);
+            copy.location["."].expression += to_literal(static_cast<T>(rhs)) + ";-;";
+            return copy;
+        } else if constexpr (std::is_same_v<V, Tracked<T>>) {
+            Tracked<T> copy = rhs;
+            copy.data = static_cast<T>(lhs) - rhs.data;
+            copy.location["."].expression += to_literal(static_cast<T>(lhs)) + ";swap;-;";
+            return copy;
+        } else {
+            return static_cast<T>(lhs) - static_cast<T>(rhs);
+        }
     }
 
-    Tracked<T> operator/(const T& other) const {
-        Tracked<T> copy = *this;
-        copy.data = data / other;
-        copy.location["."].expression += std::to_string(other) + ";/;";
-        return copy;
-    }
-
-    friend Tracked<T> operator+(const T& lhs, const Tracked<T>& rhs) {
-        return rhs + lhs;
-    }
-
-    friend Tracked<T> operator*(const T& lhs, const Tracked<T>& rhs) {
-        return rhs * lhs;
-    }
-
-    friend Tracked<T> operator-(const T& lhs, const Tracked<T>& rhs) {
-        return rhs - lhs;
-    }
-
-    friend Tracked<T> operator/(const T& lhs, const Tracked<T>& rhs) {
-        return rhs / lhs;
+    template <typename U, typename V>
+    friend Tracked<T> operator/(const U& lhs, const V& rhs) {
+        if constexpr (std::is_same_v<U, Tracked<T>>) {
+            Tracked<T> copy = lhs;
+            copy.data = lhs.data / static_cast<T>(rhs);
+            copy.location["."].expression += to_literal(static_cast<T>(rhs)) + ";/;";
+            return copy;
+        } else if constexpr (std::is_same_v<V, Tracked<T>>) {
+            Tracked<T> copy = rhs;
+            copy.data = static_cast<T>(lhs) / rhs.data;
+            copy.location["."].expression += to_literal(static_cast<T>(lhs)) + ";swap;/;";
+            return copy;
+        } else {
+            return static_cast<T>(lhs) / static_cast<T>(rhs);
+        }
     }
 
 private:
@@ -233,6 +320,16 @@ void map_leaves(Tracked<T>& tracked_message, Visitor func) {
     const auto* members = reinterpret_cast<const rosidl_typesupport_introspection_cpp::MessageMembers*>(handle->data);
 
     map_leaves_(tracked_message, members, func, "", 0);
+}
+
+template <typename T>
+Tracked<T> sin(const Tracked<T>& v) {
+    return v.sin();
+}
+
+template <typename T>
+Tracked<T> cos(const Tracked<T>& v) {
+    return v.cos();
 }
 
 #endif // TRACKED_H

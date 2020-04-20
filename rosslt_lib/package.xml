@@ -32,6 +32,7 @@
   <depend>rclcpp</depend>
   <depend>rosslt_msgs</depend>
   <depend>rosidl_typesupport_introspection_cpp</depend>
+  <test_depend>ament_cmake_gtest</test_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
