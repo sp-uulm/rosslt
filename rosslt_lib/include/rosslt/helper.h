@@ -93,13 +93,13 @@ T applyExpression(T val, const std::string& exp_string) {
             } else if (token == "swap") {
                 std::swap(*(stack.end()-2), stack.back());
             } else if (token == "sin") {
-                stack.back() = std::sin(stack.back());
+                stack.back() = std::sin(static_cast<double>(stack.back()));
             } else if (token == "cos") {
-                stack.back() = std::cos(stack.back());
+                stack.back() = std::cos(static_cast<double>(stack.back()));
             } else if (token == "asin") {
-                stack.back() = std::asin(stack.back());
+                stack.back() = std::asin(static_cast<double>(stack.back()));
             } else if (token == "acos") {
-                stack.back() = std::acos(stack.back());
+                stack.back() = std::acos(static_cast<double>(stack.back()));
             } else if (token[0] == '"') {
                 if (token.back() == '"') {
                     stack.push_back(sto<T>(token.substr(1, token.length()-2)));
