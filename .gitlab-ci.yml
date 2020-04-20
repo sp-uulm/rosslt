@@ -1,10 +1,13 @@
 image: ros:eloquent
 
-create_workspace:
- stage: .pre
+build:
+ stage: build
  script:
+   - apt update
+   - apt --yes --force-yes install ros-eloquent-interactive-markers
+ 
    - source /opt/ros/eloquent/setup.bash
-   
+
    - mkdir -p ros_ws/src
 
    - rm -f ros_ws/src/rosslt || true
@@ -13,11 +16,8 @@ create_workspace:
    - cd ros_ws
    - rm -rf build install log
 
-build:
- stage: build
- script:
    - colcon build --packages-up-to rosslt_demo
    - source install/local_setup.bash
  artifacts:
     paths:
-        - install
+        - ros_ws/install
