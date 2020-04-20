@@ -31,5 +31,7 @@ test:
  stage: test
  script:
    - cd ros_ws
-   - colcon test --packages-up-to rosslt_demo --return-code-on-test-failure
+   - source /opt/ros/eloquent/setup.bash
+   - source install/local_setup.bash
+   - colcon test --packages-up-to rosslt_lib --return-code-on-test-failure
    - colcon test-result
