@@ -1,9 +1,5 @@
 image: ros:eloquent
 
-stages:
- - build
- - test
-
 build:
  stage: build
  script:
@@ -23,15 +19,9 @@ build:
    - colcon build --packages-up-to rosslt_demo
    - source install/local_setup.bash
    
+   - colcon test --packages-up-to rosslt_lib --return-code-on-test-failure
+   - colcon test-result
+    
  artifacts:
     paths:
         - ros_ws/install
-
-test:
- stage: test
- script:
-   - cd ros_ws
-   - source /opt/ros/eloquent/setup.bash
-   - source install/local_setup.bash
-   - colcon test --packages-up-to rosslt_lib --return-code-on-test-failure
-   - colcon test-result
