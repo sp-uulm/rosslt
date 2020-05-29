@@ -71,7 +71,19 @@ std::string reverseExpression(const std::vector<std::string>& v, int pos, bool s
     for (int j = 0; j < i; ++j) {
         result << v[j] << ";";
     }
-    result << (swapped || (i-1 >= 0 && v[i-1] == "swap") ? v[i] : inverse_op(v[i])) << ";";
+
+    // if the operator is non-commutative and rhs (swapped) it must be kept otherwise, the swap is removed and the operator reversed
+    // Example:
+    // 3 2;swap;- -> -1 and -1 2;swap;- -> 3 but
+    // 3 2;swap;+ ->  5 and  5 2;- -> 3
+    bool op_is_rhs = swapped || (i-1 >= 0 && v[i-1] == "swap");
+    bool op_is_commutative = v[i] == "+" || v[i] == "*";
+
+    if (op_is_commutative) {
+        result << (op_is_rhs ? "swap;" + inverse_op(v[i]) : inverse_op(v[i])) << ";";
+    } else {
+        result << (op_is_rhs ? v[i] : inverse_op(v[i])) << ";";
+    }
 
     return reverseExpression(v, i+1, (v[i] == "swap")) + result.str();
 }

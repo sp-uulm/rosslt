@@ -217,6 +217,8 @@ TEST(TestTracked, ApplyExpression) {
 
     EXPECT_DOUBLE_EQ(applyExpression(3.0, "18;swap;/;"), 6);
     EXPECT_DOUBLE_EQ(applyExpression(0.0, "2;swap;-;"), 2);
+    EXPECT_DOUBLE_EQ(applyExpression(6.0, "4;swap;*;"), 24.0);
+    EXPECT_DOUBLE_EQ(applyExpression(2.0, "3;swap;+;"), 5.0);
 
     EXPECT_DOUBLE_EQ(applyExpression(4.0, "1;1;1;1;+;+;+;+;"), 8);
     EXPECT_DOUBLE_EQ(applyExpression(1.0, "2;3;*;4;2;/;+;-;"), -7);
@@ -248,6 +250,8 @@ TEST(TestTracked, ReverseExpression) {
 
     EXPECT_DOUBLE_EQ(applyExpression(6.0, reverseExpression("18;swap;/;")), 3.0);
     EXPECT_DOUBLE_EQ(applyExpression(2.0, reverseExpression("2;swap;-;")), 0.0);
+    EXPECT_DOUBLE_EQ(applyExpression(24.0, reverseExpression("4;swap;*;")), 6.0);
+    EXPECT_DOUBLE_EQ(applyExpression(5.0, reverseExpression("3;swap;+;")), 2.0);
 
     EXPECT_DOUBLE_EQ(applyExpression(8.0, reverseExpression("1;1;1;1;+;+;+;+;")), 4.0);
     EXPECT_DOUBLE_EQ(applyExpression(-7.0, reverseExpression("2;3;*;4;2;/;+;-;")), 1.0);
