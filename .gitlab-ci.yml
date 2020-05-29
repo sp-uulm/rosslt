@@ -19,11 +19,9 @@ build:
    - colcon build --packages-up-to rosslt_demo
    - source install/local_setup.bash
    
- stage: test
- script:
-   - colcon test --packages-up-to rosslt_demo --return-code-on-test-failure
+   - colcon test --packages-up-to rosslt_lib --return-code-on-test-failure
    - colcon test-result
- 
+    
  artifacts:
     paths:
         - ros_ws/install
