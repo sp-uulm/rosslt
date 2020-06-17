@@ -203,7 +203,7 @@ protected:
         }
     }
 
-private:
+protected:
     LocationManager loc_mgr;
 };
 
