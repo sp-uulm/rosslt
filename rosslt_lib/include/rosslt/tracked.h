@@ -238,7 +238,7 @@ private:
     LocationMap location;
 };
 
-#define SET_FIELD(Obj, Field, Value) (Obj) = (Obj).set_field((Obj).get_data().Field, #Field, (Value))
+#define SET_FIELD(Obj, Field, Value) (Obj) = (Obj).set_field((Obj).get_data().Field, #Field, make_tracked(Value))
 
 #define GET_FIELD(Obj, Field) (Obj).get_field((Obj).get_data().Field, #Field)
 
@@ -330,6 +330,29 @@ Tracked<T> sin(const Tracked<T>& v) {
 template <typename T>
 Tracked<T> cos(const Tracked<T>& v) {
     return v.cos();
+}
+
+template <typename T>
+struct is_tracked {
+    static constexpr bool value = false;
+};
+
+template <typename T>
+struct is_tracked<Tracked<T>> {
+    static constexpr bool value = true;
+};
+
+template <typename T>
+constexpr bool is_tracked_v = is_tracked<T>::value;
+
+template <typename T, std::enable_if_t<!is_tracked_v<T>, bool> = true>
+Tracked<T> make_tracked(T data, Location loc = Location()) {
+    return Tracked<T>(data, loc);
+}
+
+template <typename T, std::enable_if_t<is_tracked_v<T>, bool> = true>
+T make_tracked(T data) {
+    return data;
 }
 
 #endif // TRACKED_H

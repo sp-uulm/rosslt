@@ -51,7 +51,7 @@ int is_operator(const std::string& token) {
 }
 
 std::string reverseExpression(const std::vector<std::string>& v, int pos, bool swapped = false) {
-    if (pos >= v.size())
+    if (pos >= static_cast<int64_t>(v.size()))
         return "";
 
     std::stringstream result;

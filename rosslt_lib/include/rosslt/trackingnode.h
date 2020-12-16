@@ -7,6 +7,7 @@
 #include "rosslt_msgs/msg/source_change.hpp"
 #include "rosslt_msgs/srv/get_value.hpp"
 
+#include <cstdint>
 #include <chrono>
 #include <memory>
 #include <string>

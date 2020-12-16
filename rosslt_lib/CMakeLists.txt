@@ -30,7 +30,7 @@ add_library(rosslt SHARED
 ament_target_dependencies(rosslt rclcpp rosslt_msgs rosidl_typesupport_introspection_cpp)
 ament_export_include_directories(include)
 
-ament_export_interfaces(export_rosslt HAS_LIBRARY_TARGET)
+ament_export_targets(export_rosslt HAS_LIBRARY_TARGET)
 
 install(
   DIRECTORY include/
