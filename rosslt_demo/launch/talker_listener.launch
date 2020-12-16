@@ -1,0 +1,4 @@
+<launch>
+   <node pkg="rosslt_demo" exec="slt_talker"/>
+   <node pkg="rosslt_demo" exec="slt_listener"/>
+</launch>

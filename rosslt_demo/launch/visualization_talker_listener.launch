@@ -1,0 +1,5 @@
+<launch>
+   <node pkg="rosslt_demo" exec="vis_talker"/>
+   <node pkg="rosslt_demo" exec="vis_listener"/>
+   <node pkg="rviz2" exec="rviz2" args="-d $(find-pkg-share rosslt_demo)/config/interactive_markers.rviz"/>
+</launch>
