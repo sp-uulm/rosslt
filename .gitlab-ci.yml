@@ -1,12 +1,12 @@
-image: ros:eloquent
+image: ros:foxy
 
 build:
  stage: build
  script:
    - apt update
-   - apt --yes --force-yes install ros-eloquent-interactive-markers
+   - apt --yes --force-yes install ros-foxy-interactive-markers
  
-   - source /opt/ros/eloquent/setup.bash
+   - source /opt/ros/foxy/setup.bash
 
    - mkdir -p ros_ws/src
 
