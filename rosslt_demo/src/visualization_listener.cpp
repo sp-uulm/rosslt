@@ -31,15 +31,20 @@ public:
 
         m.header.frame_id = "world";
         m.header.stamp = now();
-        m.name = "foo_" + marker.get_data().ns + std::to_string(marker.get_data().id);
+        m.name = "vis_listener_" + marker.get_data().ns + std::to_string(marker.get_data().id);
         m.pose = pose;
 
         visualization_msgs::msg::InteractiveMarkerControl marker_control;
         marker_control.always_visible = true;
 
         auto marker_ = marker.get_data();
-        marker_.pose = geometry_msgs::msg::Pose();
+        marker_.pose = pose;
         marker_control.markers.push_back(marker_);
+        marker_control.orientation.w = 1;
+        marker_control.orientation.x = 0;
+        marker_control.orientation.y = 0;
+        marker_control.orientation.z = 0;
+        marker_control.interaction_mode = visualization_msgs::msg::InteractiveMarkerControl::NONE;
 
         m.controls.push_back(marker_control);
 
