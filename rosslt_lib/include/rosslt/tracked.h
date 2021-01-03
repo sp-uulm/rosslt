@@ -8,22 +8,44 @@
 #include "rosidl_typesupport_introspection_cpp/message_introspection.hpp"
 #include "rosidl_typesupport_introspection_cpp/field_types.hpp"
 
+# include <boost/iterator/iterator_facade.hpp>
+
 #include <string>
 #include <cmath>
+
+template<class> class Tracked;
+
+template <typename T>
+struct is_tracked {
+    static constexpr bool value = false;
+};
+
+template <typename T>
+struct is_tracked<Tracked<T>> {
+    static constexpr bool value = true;
+};
+
+template <typename T>
+constexpr bool is_tracked_v = is_tracked<T>::value;
 
 template<typename T>
 class Tracked {
 public:
-    Tracked(T data = T(), Location loc = Location()) : data(data) {
+    Tracked() : data() {
+        location["."] = Location();
+    }
+
+    Tracked(const T& data, Location loc = Location()) : data(data) {
         location["."] = loc;
     }
 
     template <typename U>
-    Tracked(U data = U(), Location loc = Location(), std::enable_if_t<!rosidl_generator_traits::is_message<U>::value>* = nullptr) : data(data) {
+    Tracked(U data, Location loc = Location(), std::enable_if_t<!rosidl_generator_traits::is_message<U>::value>* = nullptr) : data(data) {
         location["."] = loc;
     }
 
     Tracked(const T& data, LocationMap loc) : data(data), location(std::move(loc)) {
+        location["."]; // make sure . is initialized, as location_slice does not guarantee it.
     }
 
     Tracked(const T& data, const rosslt_msgs::msg::LocationHeader& loc) : data(data) {
@@ -31,6 +53,8 @@ public:
             location[loc.paths[i]] = loc.locations[i];
         }
     }
+
+    Tracked(const Tracked<T>& other) = default;
 
     template <typename Msg>
     Tracked(const Msg& msg, std::enable_if_t<rosidl_generator_traits::is_message<Msg>::value>* = nullptr) : Tracked(msg2data<T>(msg.data), msg.location) {
@@ -75,16 +99,7 @@ public:
     Tracked<U> get_field(const U& member, const std::string& name) const {
         //assert(&member >= &data && &member < &data + sizeof(T));
 
-        LocationMap map;
-
-        for (const auto& [k, v] : location) {
-            if (k.rfind(name, 0) == 0) {// k.starts_with(name)
-                auto new_key = k.substr(name.size());
-                map[new_key.empty() ? "." : new_key.substr(1)] = v;
-            }
-        }
-
-        return Tracked<U>(member, map);
+        return Tracked<U>(member, location_slice(location, name));
     }
 
     template<typename U>
@@ -94,9 +109,7 @@ public:
         Tracked<T> copy = *this;
         *reinterpret_cast<U*>(reinterpret_cast<uint8_t*>(&copy) + (reinterpret_cast<const uint8_t*>(&member) - reinterpret_cast<const uint8_t*>(this))) = value.get_data();
 
-        for (const auto& [k, v] : value.get_location()) {
-            copy.location[k == "." ? name : name + "/" + k] = v;
-        }
+        copy.location = add_locations(location, value.get_location(), name);
 
         return copy;
     }
@@ -199,7 +212,7 @@ use_rhs:
         }
     }
 
-    template <typename U, typename V>
+    template <typename U, typename V, std::enable_if_t<std::is_convertible_v<U,T> || std::is_convertible_v<V,T>, bool> = true>
     friend Tracked<T> operator-(const U& lhs, const V& rhs) {
         if constexpr (std::is_same_v<U, Tracked<T>>) {
             Tracked<T> copy = lhs;
@@ -233,7 +246,229 @@ use_rhs:
         }
     }
 
+    // methods for Tracked<vector<X>>
+
+    template< class, class = void >
+    struct get_value_type_member {
+        using type = int;
+    };
+
+    template< class U >
+    struct get_value_type_member<U, std::void_t<typename U::value_type>> {
+        using type = typename U::value_type;
+    };
+
+    using value_type = typename get_value_type_member<T>::type;
+
+    class Reference {
+    public:
+        explicit Reference(Tracked<std::vector<T>>* p, size_t position)
+          : vec(p), pos(position) {}
+
+        Reference operator= (const Tracked<T>& other) {
+            vec->get_data()[pos] = other.get_data();
+            vec->get_location() = add_locations(vec->get_location(), other.get_location(), std::to_string(pos));
+        }
+
+        operator Tracked<T> () const {
+            return get();
+        }
+
+        const Tracked<T> get() const {
+            return Tracked<T>(vec->get_data()[pos], location_slice(vec->get_location(), std::to_string(pos)));
+        }
+
+        Tracked<T> get() {
+            return Tracked<T>(vec->get_data()[pos], location_slice(vec->get_location(), std::to_string(pos)));
+        }
+
+        const T get_data() const {
+            return get().get_data();
+        }
+
+        const LocationMap get_location() const {
+            return get().get_location();
+        }
+
+    private:
+        Tracked<std::vector<T>>* vec;
+        size_t pos;
+    };
+
 private:
+
+    class Iterator : public boost::iterator_facade<Iterator, value_type, std::random_access_iterator_tag, typename Tracked<value_type>::Reference> {
+    public:
+        Iterator()
+          : vec(nullptr) {}
+
+        explicit Iterator(Tracked<T>* p, size_t position)
+          : vec(p), pos(position) {}
+
+     private:
+        friend class boost::iterator_core_access;
+
+        void increment() { pos++; }
+        void decrement() { pos--; }
+
+        void advance(int n) {
+            pos += n;
+        }
+
+        ptrdiff_t distance_to(const Iterator& other) const {
+            return other.pos - pos;
+        }
+
+        bool equal(const Iterator& other) const {
+            return pos == other.pos;
+        }
+
+        typename Tracked<value_type>::Reference dereference() const {
+            return (*vec)[pos];
+        }
+
+        Tracked<T>* vec;
+        size_t pos;
+    };
+
+    class ConstIterator : public boost::iterator_facade<Iterator, value_type, std::random_access_iterator_tag, typename Tracked<value_type>::Reference> {
+    public:
+        ConstIterator()
+          : vec(nullptr) {}
+
+        explicit ConstIterator(const Tracked<T>* p, size_t position)
+          : vec(p), pos(position) {}
+
+     private:
+        friend class boost::iterator_core_access;
+
+        void increment() { pos++; }
+        void decrement() { pos--; }
+
+        void advance(int n) {
+            pos += n;
+        }
+
+        ptrdiff_t distance_to(const ConstIterator& other) const {
+            return other.pos - pos;
+        }
+
+        bool equal(const ConstIterator& other) const {
+            return pos == other.pos;
+        }
+
+        const typename Tracked<value_type>::Reference dereference() const {
+            return (*vec)[pos];
+        }
+
+        const Tracked<T>* vec;
+        size_t pos;
+    };
+
+public:
+    size_t size() const {
+        static_assert(is_vector<T>::value, "size can only be called on a Tracked<vector<T>>");
+
+        return get_data().size();
+    }
+
+    template<typename U>
+    void push_back(const U& value) {
+        static_assert(is_vector<T>::value, "push_back can only be called on a Tracked<vector<T>>");
+        static_assert(is_tracked_v<U> || std::is_convertible_v<U, typename T::value_type>, "The argument to push_back must be of type value_type or Tracked<value_type>");
+
+        if constexpr (is_tracked_v<U>) {
+            get_data().push_back(value.get_data());
+            location = add_locations(location, value.get_location(), std::to_string(get_data().size() - 1));
+
+            return;
+        }
+
+        if constexpr (std::is_convertible_v<U, typename T::value_type>) {
+            get_data().push_back(value);
+
+            return;
+        }
+    }
+
+    void pop_back() {
+        static_assert(is_vector<T>::value, "pop_back can only be called on a Tracked<vector<T>>");
+
+        get_data().pop_back();
+
+        location = remove_locations(location, std::to_string(get_data().size()));
+    }
+
+    void clear() {
+        static_assert(is_vector<T>::value, "clear can only be called on a Tracked<vector<T>>");
+
+        get_data().clear();
+
+        location = location_slice(location, ".");
+    }
+
+    typename Tracked<value_type>::Reference front() {
+        static_assert(is_vector<T>::value, "front can only be called on a Tracked<vector<T>>");
+
+        return (*this)[0];
+    }
+
+    const typename Tracked<value_type>::Reference front() const {
+        static_assert(is_vector<T>::value, "front can only be called on a Tracked<vector<T>>");
+
+        return (*this)[0];
+    }
+
+    typename Tracked<value_type>::Reference back() {
+        static_assert(is_vector<T>::value, "back can only be called on a Tracked<vector<T>>");
+
+        return (*this)[get_data().size()-1];
+    }
+
+    const typename Tracked<value_type>::Reference back() const {
+        static_assert(is_vector<T>::value, "back can only be called on a Tracked<vector<T>>");
+
+        return (*this)[get_data().size()-1];
+    }
+
+    typename Tracked<value_type>::Reference operator[] (size_t pos) {
+        static_assert(is_vector<T>::value, "operator[] can only be called on a Tracked<vector<T>>");
+
+        return typename Tracked<value_type>::Reference(this, pos);
+    }
+
+    const typename Tracked<value_type>::Reference operator[] (size_t pos) const {
+        static_assert(is_vector<T>::value, "operator[] can only be called on a Tracked<vector<T>>");
+
+        return typename Tracked<value_type>::Reference(this, pos);
+    }
+
+    Iterator begin() {
+        static_assert(is_vector<T>::value, "begin can only be called on a Tracked<vector<T>>");
+
+        return Iterator(this, 0);
+    }
+
+    Iterator end() {
+        static_assert(is_vector<T>::value, "end can only be called on a Tracked<vector<T>>");
+
+        return Iterator(this, get_data().size());
+    }
+
+    ConstIterator begin() const {
+        static_assert(is_vector<T>::value, "begin can only be called on a Tracked<vector<T>>");
+
+        return ConstIterator(this, 0);
+    }
+
+    ConstIterator end() const {
+        static_assert(is_vector<T>::value, "end can only be called on a Tracked<vector<T>>");
+
+        return ConstIterator(this, get_data().size());
+    }
+
+private:
+
     T data;
     LocationMap location;
 };
@@ -331,19 +566,6 @@ template <typename T>
 Tracked<T> cos(const Tracked<T>& v) {
     return v.cos();
 }
-
-template <typename T>
-struct is_tracked {
-    static constexpr bool value = false;
-};
-
-template <typename T>
-struct is_tracked<Tracked<T>> {
-    static constexpr bool value = true;
-};
-
-template <typename T>
-constexpr bool is_tracked_v = is_tracked<T>::value;
 
 template <typename T, std::enable_if_t<!is_tracked_v<T>, bool> = true>
 Tracked<T> make_tracked(T data, Location loc = Location()) {

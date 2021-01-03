@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
 #include <cstdint>
+#include <rclcpp/rclcpp.hpp>
 
 #include "rosslt/tracked.h"
 #include "rosslt_msgs/msg/int32_tracked.hpp"
+#include "rosslt_msgs/msg/marker_tracked.hpp"
 
 TEST(TestTracked, ConstructTrackedInt) {
     Tracked<int> test1(5);
@@ -258,4 +260,161 @@ TEST(TestTracked, ReverseExpression) {
 
     EXPECT_DOUBLE_EQ(applyExpression(sin(1.0), reverseExpression("sin;")), 1.0);
     EXPECT_DOUBLE_EQ(applyExpression(cos(2.0), reverseExpression("cos;")), 2.0);
+}
+
+TEST(TestTracked, MakeTracked) {
+    EXPECT_EQ(make_tracked(5).get_data(), 5);
+    EXPECT_EQ(make_tracked(make_tracked(5)).get_data(), 5);
+
+    EXPECT_TRUE(make_tracked(false, Location("foo", 42)).get_location().at(".").is_valid());
+    EXPECT_FALSE(make_tracked("Hallo").get_location().at(".").is_valid());
+}
+
+TEST(TestTracked, IsTracked) {
+    EXPECT_TRUE(is_tracked<Tracked<int>>::value);
+    EXPECT_FALSE(is_tracked<int>::value);
+
+    EXPECT_TRUE(is_tracked_v<Tracked<double>>);
+    EXPECT_FALSE(is_tracked_v<double>);
+}
+
+TEST(TestTracked, SetPrimitiveField) {
+    Tracked<visualization_msgs::msg::Marker> marker;
+    Location loc("foo", 22);
+
+    SET_FIELD(marker, id, make_tracked(42, loc));
+
+    EXPECT_EQ(marker.get_location().at("id").location_id, 22);
+
+    EXPECT_EQ(marker.get_data().id, 42);
+
+    Tracked<int> id = GET_FIELD(marker, id);
+
+    EXPECT_EQ(id.get_location().at(".").location_id, 22);
+    EXPECT_EQ(id.get_data(), 42);
+
+    SET_FIELD(marker, id, 25);
+
+    id = GET_FIELD(marker, id);
+
+    EXPECT_FALSE(id.get_location().at(".").is_valid());
+    EXPECT_EQ(id.get_data(), 25);
+
+    //test offsets after array
+
+    SET_FIELD(marker, text, std::string("test"));
+
+    EXPECT_EQ(marker.get_data().text, "test");
+}
+
+TEST(TestTracked, SetComplexField) {
+    Tracked<visualization_msgs::msg::Marker> marker;
+    Location loc("foo", 22);
+    std_msgs::msg::Header head;
+
+    head.frame_id = "bar";
+    head.stamp = rclcpp::Time(12345);
+
+    SET_FIELD(marker, header, head);
+
+    EXPECT_EQ(marker.get_data().header.frame_id, "bar");
+    EXPECT_FALSE(marker.get_location().at(".").is_valid());
+
+    Tracked<std_msgs::msg::Header> header = GET_FIELD(marker, header);
+
+    EXPECT_FALSE(header.get_location().at(".").is_valid());
+    EXPECT_EQ(header.get_data().stamp, head.stamp);
+
+    head.frame_id = "baz";
+    head.stamp = rclcpp::Time(10);
+
+    SET_FIELD(marker, header, make_tracked(head, loc));
+
+    EXPECT_EQ(marker.get_data().header.frame_id, "baz");
+    EXPECT_FALSE(marker.get_location().at(".").is_valid());
+
+    header = GET_FIELD(marker, header);
+
+    EXPECT_TRUE(header.get_location().at(".").is_valid());
+    EXPECT_EQ(header.get_data().stamp, head.stamp);
+}
+
+TEST(TestTracked, VectorMethods) {
+    Tracked<std::vector<int>> vec;
+    Location loc("foo", 22);
+    Location loc2("bar", 23);
+
+    EXPECT_EQ(vec.size(), 0);
+
+    vec.push_back(42);
+    vec.push_back(make_tracked(7, loc));
+    vec.push_back(-7);
+    vec.push_back(make_tracked(15, loc2));
+
+    EXPECT_EQ(vec.size(), 4);
+
+    EXPECT_EQ(vec[0].get_data(), 42);
+    EXPECT_EQ(vec[1].get_data(), 7);
+    EXPECT_EQ(vec.front().get_data(), 42);
+    EXPECT_EQ(vec.back().get_data(), 15);
+
+    EXPECT_FALSE(vec[0].get_location().at(".").is_valid());
+    EXPECT_EQ(vec[1].get_location().at(".").location_id, 22);
+
+    vec.pop_back();
+
+    EXPECT_EQ(vec.size(), 3);
+    EXPECT_EQ(vec.back().get_data(), -7);
+}
+
+TEST(TestTracked, VectorIterator) {
+    Tracked<std::vector<int>> vec;
+    Location loc("foo", 22);
+    Location loc2("bar", 23);
+
+    EXPECT_EQ(vec.size(), 0);
+
+    vec.push_back(42);
+    vec.push_back(make_tracked(7, loc));
+    vec.push_back(-7);
+    vec.push_back(make_tracked(15, loc2));
+
+    EXPECT_EQ(vec.size(), 4);
+
+    for (Tracked<int>::Reference i : vec) {
+        i = make_tracked(111, loc2);
+    }
+
+    EXPECT_TRUE(std::all_of(vec.begin(), vec.end(), [&](Tracked<int> i){ return i.get_data() == 111 && i.get_location().at(".") == loc2;}));
+
+    vec.clear();
+
+    EXPECT_EQ(vec.size(), 0);
+}
+
+TEST(TestTracked, SetArrayField) {
+    Tracked<visualization_msgs::msg::Marker> marker;
+    Location loc("foo", 22);
+    std_msgs::msg::ColorRGBA col, col2;
+
+    col.r = 0.5;
+    col2.r = 0.2;
+
+    Tracked<std::vector<std_msgs::msg::ColorRGBA>> colors = GET_FIELD(marker, colors);
+
+    colors.push_back(col);
+    colors.push_back(make_tracked(col2, loc));
+
+    EXPECT_FLOAT_EQ(colors[0].get_data().r, 0.5);
+    EXPECT_FLOAT_EQ(colors[1].get_data().r, 0.2);
+
+    SET_FIELD(marker, colors, colors);
+
+    EXPECT_EQ(marker.get_data().colors.size(), 2);
+    EXPECT_FLOAT_EQ(marker.get_data().colors[1].r, 0.2);
+
+    EXPECT_FALSE(GET_FIELD(marker, colors).get_location().at(".").is_valid());
+    EXPECT_FALSE(GET_FIELD(marker, colors)[0].get_location().at(".").is_valid());
+    EXPECT_TRUE(GET_FIELD(marker, colors)[1].get_location().at(".").is_valid());
+    EXPECT_EQ(GET_FIELD(marker, colors)[1].get_location().at(".").location_id, 22);
 }

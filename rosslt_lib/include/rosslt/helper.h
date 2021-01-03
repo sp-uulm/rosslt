@@ -7,6 +7,16 @@
 #include <cmath>
 #include <vector>
 
+template <typename T>
+struct is_vector {
+    static constexpr bool value = false;
+};
+
+template <typename T>
+struct is_vector<std::vector<T>> {
+    static constexpr bool value = true;
+};
+
 template<typename To, typename From>
 To msg2data(const From& from) {
     return from;
