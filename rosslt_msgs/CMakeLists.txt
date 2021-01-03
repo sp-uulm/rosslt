@@ -28,6 +28,7 @@ rosidl_generate_interfaces(rosslt_msgs
   "msg/SourceChange.msg"
   "msg/Int32Tracked.msg"
   "msg/MarkerTracked.msg"
+  "msg/PoseTracked.msg"
   "srv/GetValue.srv"
   DEPENDENCIES builtin_interfaces std_msgs visualization_msgs
 )

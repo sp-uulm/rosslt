@@ -43,11 +43,15 @@ add_executable(vis_listener src/visualization_listener.cpp)
 ament_target_dependencies(vis_listener rclcpp std_msgs visualization_msgs rosslt_msgs rosslt_lib interactive_markers)
 target_link_libraries(vis_listener rosslt_lib::rosslt)
 
+add_executable(slt_trajectory src/slt_trajectory.cpp)
+ament_target_dependencies(slt_trajectory rclcpp std_msgs visualization_msgs rosslt_msgs rosslt_lib)
+target_link_libraries(slt_trajectory rosslt_lib::rosslt)
 
 # Install nodes
 install(TARGETS
   slt_talker
   slt_listener
+  slt_trajectory
   vis_talker
   vis_listener
   DESTINATION lib/${PROJECT_NAME}
