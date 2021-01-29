@@ -268,6 +268,7 @@ use_rhs:
         Reference operator= (const Tracked<T>& other) {
             vec->get_data()[pos] = other.get_data();
             vec->get_location() = add_locations(vec->get_location(), other.get_location(), std::to_string(pos));
+            return *this;
         }
 
         operator Tracked<T> () const {

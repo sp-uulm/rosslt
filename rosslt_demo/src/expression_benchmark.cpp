@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 #include <chrono>
+#include <vector>
 
 int main(int argc, char* argv) {
     srand((unsigned) time(nullptr));
@@ -19,21 +20,26 @@ int main(int argc, char* argv) {
     for(int n = 0; n < N; ++n) {
         Location loc("test", 0);
         Tracked<double> x (10.0, loc);
+        std::vector<int> rand_numbers;
+        for (int i = 0; i < M; ++i) {
+            rand_numbers.push_back(rand()%4);
+            rand_numbers.push_back(rand()%10+1);
+        }
 
         auto start_tracked = std::chrono::steady_clock::now();
         for (int i = 0; i < M; ++i) {
-            switch(rand()%4) {
+            switch(rand_numbers[2*i]) {
             case 0:
-                x = x + (rand()%10+1);
+                x = x + (rand_numbers[2*i+1]);
                 break;
             case 1:
-                x = x - (rand()%10+1);
+                x = x - (rand_numbers[2*i+1]);
                 break;
             case 2:
-                x = x * (rand()%10+1);
+                x = x * (rand_numbers[2*i+1]);
                 break;
             case 3:
-                x = x / (rand()%10+1);
+                x = x / (rand_numbers[2*i+1]);
                 break;
             }
         }
@@ -43,15 +49,15 @@ int main(int argc, char* argv) {
 
         auto start_apply = std::chrono::steady_clock::now();
         double a = applyExpression(10.0, exp);
-        apply_duration += std::chrono::steady_clock::now() - start_tracked;
+        apply_duration += std::chrono::steady_clock::now() - start_apply;
 
         auto start_reverse = std::chrono::steady_clock::now();
         std::string rev = reverseExpression(exp);
-        reverse_duration += std::chrono::steady_clock::now() - start_tracked;
+        reverse_duration += std::chrono::steady_clock::now() - start_reverse;
 
         auto start_reverse_apply = std::chrono::steady_clock::now();
         double b = applyExpression(a, rev);
-        reverse_apply_duration += std::chrono::steady_clock::now() - start_tracked;
+        reverse_apply_duration += std::chrono::steady_clock::now() - start_reverse_apply;
 
         if (b < 9.9 || b > 10.1)
             std::cout << "Error: " << b << " != 10 (" << exp << ", rev: " << rev << ")" << std::endl;
