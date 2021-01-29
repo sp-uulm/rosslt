@@ -262,6 +262,10 @@ TEST(TestTracked, ReverseExpression) {
     EXPECT_DOUBLE_EQ(applyExpression(cos(2.0), reverseExpression("cos;")), 2.0);
 }
 
+TEST(TestTracked, ReverseExpression2) {
+    EXPECT_DOUBLE_EQ(applyExpression(1.2, reverseExpression("2.000000;+;10.000000;/;")), 10.0);
+}
+
 TEST(TestTracked, MakeTracked) {
     EXPECT_EQ(make_tracked(5).get_data(), 5);
     EXPECT_EQ(make_tracked(make_tracked(5)).get_data(), 5);

@@ -68,7 +68,7 @@ std::string reverseExpression(const std::vector<std::string>& v, int pos, bool s
 
     //the operator at i depends on the source and must be reversed, everything before i can be copied to the result
 
-    for (int j = 0; j < i; ++j) {
+    for (int j = pos; j < i; ++j) {
         result << v[j] << ";";
     }
 

@@ -23,6 +23,9 @@ find_package(visualization_msgs REQUIRED)
 find_package(rosslt_msgs REQUIRED)
 find_package(rosslt_lib REQUIRED)
 find_package(interactive_markers REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 include_directories(include)
 
@@ -44,17 +47,35 @@ ament_target_dependencies(vis_listener rclcpp std_msgs visualization_msgs rosslt
 target_link_libraries(vis_listener rosslt_lib::rosslt)
 
 add_executable(slt_trajectory src/slt_trajectory.cpp)
-ament_target_dependencies(slt_trajectory rclcpp std_msgs visualization_msgs rosslt_msgs rosslt_lib)
+ament_target_dependencies(slt_trajectory rclcpp std_msgs visualization_msgs rosslt_msgs rosslt_lib tf2_ros tf2 tf2_geometry_msgs)
 target_link_libraries(slt_trajectory rosslt_lib::rosslt)
+
+add_executable(slt_quad_node src/slt_quad_node.cpp)
+ament_target_dependencies(slt_quad_node rclcpp std_msgs visualization_msgs rosslt_msgs rosslt_lib interactive_markers tf2_ros tf2 tf2_geometry_msgs)
+target_link_libraries(slt_quad_node rosslt_lib::rosslt)
+
+add_executable(slt_message_statistics src/slt_message_statistics.cpp)
+ament_target_dependencies(slt_message_statistics rclcpp std_msgs visualization_msgs rosslt_msgs)
+
+add_executable(expression_benchmark src/expression_benchmark.cpp)
+ament_target_dependencies(expression_benchmark rosslt_lib)
+target_link_libraries(expression_benchmark rosslt_lib::rosslt)
 
 # Install nodes
 install(TARGETS
   slt_talker
   slt_listener
   slt_trajectory
+  slt_quad_node
   vis_talker
   vis_listener
+  slt_message_statistics
+  expression_benchmark
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY meshes
+    DESTINATION share/${PROJECT_NAME}
 )
 
 install(DIRECTORY launch

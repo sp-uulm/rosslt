@@ -2,8 +2,11 @@
 #include <memory>
 
 #include "rclcpp/rclcpp.hpp"
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "rosslt_msgs/msg/pose_tracked.hpp"
 #include "rosslt_msgs/msg/marker_tracked.hpp"
+#include <geometry_msgs/msg/pose_stamped.hpp>
 
 #include "rosslt/trackingnode.h"
 
@@ -27,9 +30,9 @@ public:
 
         // create b1 inbetween b0 and b2
         // TODO: use direction in b2
-        auto x = GET_FIELD(b0, x) + (GET_FIELD(b2, x) - GET_FIELD(b0, x))/2;
-        auto y = GET_FIELD(b0, y) + (GET_FIELD(b2, y) - GET_FIELD(b0, y))/2;
-        auto z = GET_FIELD(b0, z) + (GET_FIELD(b2, z) - GET_FIELD(b0, z))/2;
+        auto x = (GET_FIELD(b2, x) + GET_FIELD(b0, x))/2;
+        auto y = (GET_FIELD(b2, y) + GET_FIELD(b0, y))/2;
+        auto z = (GET_FIELD(b2, z) + GET_FIELD(b0, z))/2;
 
         SET_FIELD(b1, x, x);
         SET_FIELD(b1, y, y);
@@ -48,9 +51,9 @@ public:
 
         t /= tau; // scale t to [0,1]
 
-        auto x = (1-t) * (1-t) * GET_FIELD(b0, x) + t * (1-t) * GET_FIELD(b1, x) + t * t * GET_FIELD(b2, x);
-        auto y = (1-t) * (1-t) * GET_FIELD(b0, y) + t * (1-t) * GET_FIELD(b1, y) + t * t * GET_FIELD(b2, y);
-        auto z = (1-t) * (1-t) * GET_FIELD(b0, z) + t * (1-t) * GET_FIELD(b1, z) + t * t * GET_FIELD(b2, z);
+        auto x = t * t * GET_FIELD(b2, x) + 2 * t * (1-t) * GET_FIELD(b1, x) + (1-t) * (1-t) * GET_FIELD(b0, x);
+        auto y = t * t * GET_FIELD(b2, y) + 2 * t * (1-t) * GET_FIELD(b1, y) + (1-t) * (1-t) * GET_FIELD(b0, y);
+        auto z = t * t * GET_FIELD(b2, z) + 2 * t * (1-t) * GET_FIELD(b1, z) + (1-t) * (1-t) * GET_FIELD(b0, z);
 
         Tracked<geometry_msgs::msg::Point> result;
 
@@ -73,19 +76,24 @@ public:
   {
     planning_time = now();
 
-    marker_publisher_ = create_publisher<rosslt_msgs::msg::MarkerTracked>("trajectory_marker", 10);
+    tfBuffer = std::make_shared<tf2_ros::Buffer>(get_clock());
+    tfListener = std::make_shared<tf2_ros::TransformListener>(*tfBuffer);
+
+    marker_publisher_ = create_publisher<rosslt_msgs::msg::MarkerTracked>("tracked_marker", 10);
     control_target_publisher_ = create_publisher<rosslt_msgs::msg::PoseTracked>("control_target", 10);
 
     target_pose_subscriber_ = create_subscription<rosslt_msgs::msg::PoseTracked>("target_pose", rclcpp::QoS(rclcpp::KeepLast(20)),
     [this](rosslt_msgs::msg::PoseTracked::UniquePtr msg) {
         Tracked<geometry_msgs::msg::Pose> pose_msg {*msg};
         auto target_position = GET_FIELD(pose_msg, position);
-        geometry_msgs::msg::Pose current_pose;
-        current_pose.position.x = 0.0;
-        current_pose.position.y = 0.0;
-        current_pose.position.z = 0.0;
+        geometry_msgs::msg::PoseStamped current_pose;
+        current_pose.pose.position.x = 0.0;
+        current_pose.pose.position.y = 0.0;
+        current_pose.pose.position.z = 0.0;
+        current_pose.header.frame_id = "slt_quad";
+        current_pose = tfBuffer->transform(current_pose, "world");
 
-        current_trajectory = Bezier(current_pose, pose_msg, 4.0);
+        current_trajectory = Bezier(current_pose.pose, pose_msg, 4.0);
         planning_time = now();
 
         // publish line strip
@@ -162,9 +170,7 @@ public:
       color.a = 1.0;
 
       geometry_msgs::msg::Vector3 scale;
-      scale.x = 0.1;
-      scale.y = 0.1;
-      scale.z = 0.1;
+      scale.x = 0.05;
 
       SET_FIELD(message, header, header);
       SET_FIELD(message, id, id);
@@ -174,8 +180,8 @@ public:
 
       Tracked<std::vector<geometry_msgs::msg::Point>> points;
 
-      for (int i = 0; i <= 5; ++i) {
-          points.push_back(curve.get_trajectory_point(i*0.2));
+      for (int i = 0; i <= 10; ++i) {
+          points.push_back(curve.get_trajectory_point(i*0.1*4));
       }
 
       SET_FIELD(message, points, points);
@@ -186,6 +192,9 @@ public:
 private:
     Bezier current_trajectory;
     rclcpp::Time planning_time;
+
+    std::shared_ptr<tf2_ros::Buffer> tfBuffer;
+    std::shared_ptr<tf2_ros::TransformListener> tfListener;
 
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Subscription<rosslt_msgs::msg::PoseTracked>::SharedPtr target_pose_subscriber_;

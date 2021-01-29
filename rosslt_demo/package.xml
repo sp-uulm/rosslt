@@ -15,6 +15,9 @@
   <depend>rosslt_lib</depend>
   <depend>rosslt_msgs</depend>
   <depend>interacitve_markers</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

@@ -25,7 +25,8 @@ include_directories(include)
 
 # Build library
 add_library(rosslt SHARED
-    src/trackingnode.cpp)
+    src/trackingnode.cpp
+    src/location.cpp)
 
 ament_target_dependencies(rosslt rclcpp rosslt_msgs rosidl_typesupport_introspection_cpp)
 ament_export_include_directories(include)
